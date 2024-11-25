@@ -1,0 +1,260 @@
+//#include <cctype> //nao reconheceu a biblioteca mas nao precisou dela pq ele reconhce a funcao toupper
+
+char letra, letra_ok;
+
+int botao1 = 21; //pino 21
+int botao2 = 20;
+int botao3 = 2; 
+int botao4 = 3; 
+
+int leds_pedestre[8]={A8,A9,A10,A11,A12,A13,A14,A15};
+
+int leds[12] = {22,24,26,30,32,34,38,40,42,46,48,50};  // Pinos dos LEDs
+bool estado_leds[12]={true,false,false,true,false,false,true,false,false,true,false,false};
+bool estado2; //HIGH ou LOW
+//22,24,26 sao Norte
+//30,32,34 sao Leste
+//38,40,42 sao Sul
+//46,48,50 sao Oeste
+
+
+//attachInterrupt();
+
+
+void desliga_leds(){
+  for (int i=0; i<12; i++) //desliga tudo
+    on_off(i,false,LOW);
+}
+
+void desliga_leds_pedestre(){
+  for (int i=0; i<8; i++) //desliga tudo
+    digitalWrite(leds_pedestre[i], LOW);
+}
+
+void liga_todos_vermelho(){
+  for(int i=0; i<12; i=i+3) {
+    on_off(i,true,HIGH); //todos os vermelhos on
+  }
+}
+
+void pisca_amarelo_x(int i){
+  on_off(i, true,HIGH);
+  delay(600);
+  on_off(i,false,LOW);
+}
+
+void pedestre_vermelho(int i){ //liga vermelho x e desliga verde x+1
+    digitalWrite(leds_pedestre[i], HIGH);  //liga vermelho
+    digitalWrite(leds_pedestre[i+1], LOW); //desliga verde
+}
+
+void on_off(int led_x, bool estado, bool estado2){
+  digitalWrite(leds[led_x], estado2);
+  estado_leds[led_x]=estado;
+}
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(botao1, INPUT_PULLUP);
+  pinMode(botao2, INPUT_PULLUP);
+  pinMode(botao3, INPUT_PULLUP);
+  pinMode(botao4, INPUT_PULLUP);
+
+
+  for(int i=0; i<12; i++){
+    pinMode(leds[i], OUTPUT); //inicializar
+    pinMode(leds_pedestre[i], OUTPUT);
+  }
+  liga_todos_vermelho();
+  pedestre_vermelho(0);
+  pedestre_vermelho(2);
+  pedestre_vermelho(4);
+  pedestre_vermelho(6);
+}
+
+
+void loop() {
+  int estado_botao1 = digitalRead(botao1);
+  int estado_botao2 = digitalRead(botao2);
+  int estado_botao3 = digitalRead(botao3);
+  int estado_botao4 = digitalRead(botao4);
+  
+
+  //botao 1 ok
+  if (estado_botao1 == LOW) { // Se o botão for pressionado (estado LOW, pois estamos usando INPUT_PULLUP)
+    Serial.println("Pedestre no Norte!");
+
+    desliga_leds_pedestre();
+    pedestre_vermelho(2);
+    pedestre_vermelho(4);
+    pedestre_vermelho(6);
+
+    digitalWrite(leds[2], LOW);   //desliga verde norte   
+    if(!estado_leds[0])
+      pisca_amarelo_x(1);           //pisca amarelo norte
+    digitalWrite(leds[0], HIGH);  //liga vermelho carros norte
+    delay(200);
+
+    digitalWrite(leds_pedestre[0], LOW);   // desliga o LED do pedestre no norte
+    digitalWrite(leds_pedestre[1], HIGH);  // Acende o LED do pedestre no norte
+
+  }else {
+    //botao 2 ok
+    if (estado_botao2 == LOW) {
+      Serial.println("Pedestre no Leste!");
+      
+      desliga_leds_pedestre();
+      pedestre_vermelho(0);
+      pedestre_vermelho(4);
+      pedestre_vermelho(6);
+
+      digitalWrite(leds[5], LOW);  //desliga verde leste 
+      if(!estado_leds[3])
+        pisca_amarelo_x(4);          //pisca amarelo leste
+      digitalWrite(leds[3], HIGH); //liga vermelho leste
+      delay(200);
+
+      digitalWrite(leds_pedestre[2], LOW);  // desliga o LED do pedestre no leste
+      digitalWrite(leds_pedestre[3], HIGH);  // Acende o LED do pedestre no leste
+      
+    }else {
+      //botao 3 ok
+      if (estado_botao3 == LOW) {
+        Serial.println("Pedestre no Sul!");
+        
+        desliga_leds_pedestre();
+        pedestre_vermelho(0);
+        pedestre_vermelho(2);
+        pedestre_vermelho(6);
+
+        digitalWrite(leds[8], LOW);  //desliga verde sul 
+        if(!estado_leds[6])
+          pisca_amarelo_x(7);          //pisca amarelo sul
+        digitalWrite(leds[6], HIGH); //liga vermelho sul
+        delay(200);
+
+        digitalWrite(leds_pedestre[4], LOW);  // desliga o LED do pedestre no sul
+        digitalWrite(leds_pedestre[5], HIGH);  // Acende o LED do pedestre no sul
+        
+      }else {
+        //botao 4 ok
+        if (estado_botao4 == LOW) {
+          Serial.println("Pedestre no Oeste!");
+          
+          desliga_leds_pedestre();
+          pedestre_vermelho(0);
+          pedestre_vermelho(2);
+          pedestre_vermelho(4);
+
+          digitalWrite(leds[11], LOW);  //desliga verde oeste 
+          if(!estado_leds[9])
+            pisca_amarelo_x(10);          //pisca amarelo oeste
+          digitalWrite(leds[9], HIGH); //liga vermelho oeste
+          delay(200);
+
+          digitalWrite(leds_pedestre[6], LOW);   // desliga o LED do pedestre no oeste
+          digitalWrite(leds_pedestre[7], HIGH);  // Acende o LED do pedestre no oeste
+        }
+      } 
+    }
+  }
+  delay(600);
+
+
+
+  if (Serial.available() > 0) {
+    letra = Serial.read(); 
+    letra_ok = toupper(letra);
+
+
+    switch(letra_ok){ //W,D,S,A para norte,leste,sul,oeste
+      case 'W':
+        Serial.println("carro no Norte");
+        pedestre_vermelho(0); //fecha pedestre norte
+
+        for(int i=5;i<12;i=i+3){ //se tiver aberto em algum outro
+          if(estado_leds[i]){ 
+            on_off(i, false, LOW); //desliga verdes
+            pisca_amarelo_x(i-1);
+            on_off(i-2, true, HIGH); //liga vermelhos
+          }
+        }
+
+        //desliga_leds(); //carros
+        
+        //liga_todos_vermelho();
+        on_off(0,false,LOW);        //desliga vermelho norte 
+        pisca_amarelo_x(1);         //pisca amarelo norte
+        on_off(2,true,HIGH);         //liga verde norte
+        
+        break;
+      case 'D':
+        Serial.println("carro no Leste");
+        pedestre_vermelho(2); //fecha pedestre leste
+
+        for(int i=8;i<12;i=i+3){ //se tiver aberto no sul ou oeste,fecha
+          if(estado_leds[i]){ 
+            on_off(i, false, LOW); //desliga verdes
+            pisca_amarelo_x(i-1);
+            on_off(i-2, true, HIGH); //liga vermelhos
+          }
+        }
+        if(estado_leds[2]){ //se tiver aberto no norte, fecha
+            on_off(2, false, LOW);
+            pisca_amarelo_x(1);
+            on_off(0, true, HIGH);
+        }
+
+        on_off(3,false,LOW);    //desliga vermelho leste
+        pisca_amarelo_x(4);     //pisca amarelo leste
+        on_off(5,true,HIGH);    //liga verde norte
+        
+        
+        break;
+      case 'S':
+        Serial.println("carro no Sul");
+        pedestre_vermelho(4); //fecha pedestre sul
+
+        for(int i=2;i<6;i=i+3){ //se tiver aberto no norte ou leste, fecha
+          if(estado_leds[i]){ 
+            on_off(i, false, LOW);
+            pisca_amarelo_x(i-1);
+            on_off(i-2, true, HIGH);
+          }
+        }
+        if(estado_leds[11]){ //se tiver aberto no oeste, fecha
+            on_off(11, false, LOW);
+            pisca_amarelo_x(10);
+            on_off(9, true, HIGH);
+        }
+
+        on_off(6,false,LOW);    //desliga vermelho sul
+        pisca_amarelo_x(7);     //pisca amarelo sul
+        on_off(8,true,HIGH);    //liga verde sul
+        
+        
+        break;
+      case 'A':
+        Serial.println("carro no Oeste");
+        pedestre_vermelho(6); //fecha pedestre oeste
+
+        for(int i=2;i<9;i=i+3){ //se tiver aberto no norte,leste ou sul, fecha
+          if(estado_leds[i]){ 
+            on_off(i, false, LOW);
+            pisca_amarelo_x(i-1);
+            on_off(i-2, true, HIGH);
+          }
+        }
+
+        on_off(9,false,LOW);    //desliga vermelho oeste
+        pisca_amarelo_x(10);     //pisca amarelo oeste
+        on_off(11,true,HIGH);    //liga verde oeste
+        
+        break;
+    }
+  }
+
+  
+  
+}
+
